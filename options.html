@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LeetCode → GitHub Sync: Settings</title>
+  <style>
+    :root { --bg:#fff; --surface:#f5f6f8; --border:#e3e5e9; --text:#1c1e21; --muted:#6b7280; --accent:#2563eb; --ok:#166534; --err:#991b1b; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#16181d; --surface:#1f2229; --border:#2c3039; --text:#e8eaed; --muted:#9aa0aa; --accent:#3b82f6; --ok:#7ee2a0; --err:#ff9b9b; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { max-width: 460px; margin: 40px auto; padding: 0 16px; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    p.sub { color: var(--muted); margin: 0 0 20px; }
+    label { display:block; font-weight:600; margin: 14px 0 4px; }
+    input { width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .row { display:flex; gap:8px; margin-top: 20px; align-items:center; }
+    .repo-row { display:flex; gap:8px; }
+    .repo-row input { flex:1; min-width:0; width:auto; }
+    button { padding:9px 14px; border:0; border-radius:8px; font:600 14px system-ui,sans-serif; cursor:pointer; }
+    #save { background: var(--accent); color:#fff; }
+    #test, #load { background: var(--surface); color: var(--text); border:1px solid var(--border); white-space: nowrap; }
+    #msg { margin-top: 12px; font-size: 13px; }
+    #msg.ok { color: var(--ok); } #msg.err { color: var(--err); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>GitHub settings</h1>
+    <p class="sub">Where your accepted LeetCode solutions are committed.</p>
+
+    <label for="token">Personal access token</label>
+    <input id="token" type="password" autocomplete="off" placeholder="github_pat_…">
+    <div class="hint">Fine-grained token, limited to your solutions repo, with Contents: Read and write.</div>
+
+    <label for="repo">Repository</label>
+    <div class="repo-row">
+      <input id="repo" list="repoList" autocomplete="off" placeholder="owner/repo">
+      <button id="load" type="button">Load my repositories</button>
+    </div>
+    <datalist id="repoList"></datalist>
+    <div class="hint">Pick from the list, or type <code>owner/repo</code>. The repo must already have at least one commit.</div>
+
+    <div class="row">
+      <button id="save">Save</button>
+      <button id="test">Test connection</button>
+    </div>
+    <div id="msg" role="status"></div>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">&lt;/&gt;</span>
+      <h1>LeetCode → GitHub</h1>
+    </div>
+    <button id="settings" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
+  </header>
+
+  <main>
+    <section id="problem" class="card hidden">
+      <div class="meta">
+        <span id="num" class="num"></span>
+        <span id="diff" class="badge"></span>
+      </div>
+      <div id="title" class="title"></div>
+    </section>
+
+    <section id="empty" class="card empty hidden">
+      Open a LeetCode problem page to sync it.
+    </section>
+
+    <section id="setup" class="notice hidden">
+      <span>Add your GitHub token and repo first.</span>
+      <button id="openSettings" class="link-btn">Open settings</button>
+    </section>
+
+    <button id="sync" class="primary" disabled>
+      <span class="spinner"></span>
+      <span id="label">Sync to GitHub</span>
+    </button>
+
+    <div id="result" class="result hidden" role="status"></div>
+  </main>
+
+  <footer id="repoInfo"></footer>
+  <script src="popup.js"></script>
+</body>
+</html>
