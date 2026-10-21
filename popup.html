@@ -36,7 +36,15 @@
       <span id="label">Sync to GitHub</span>
     </button>
 
+    <button id="syncAll" class="secondary" disabled>Sync all solved problems</button>
+
     <div id="result" class="result hidden" role="status"></div>
+
+    <label class="switch-row">
+      <span>Auto-sync accepted submissions</span>
+      <input id="auto" type="checkbox" role="switch">
+    </label>
+    <div id="lastAuto" class="last hidden"></div>
   </main>
 
   <footer id="repoInfo"></footer>

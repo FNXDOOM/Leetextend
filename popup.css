@@ -82,9 +82,37 @@ main { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .result a, .result button { color: inherit; font-weight: 600; }
 .result button { border: 0; background: none; text-decoration: underline; cursor: pointer; font: inherit; font-weight: 600; }
 
+.secondary {
+  width: 100%; padding: 9px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font: 600 13px system-ui, sans-serif;
+}
+.secondary:hover:not(:disabled) { border-color: var(--accent); }
+.secondary:disabled { opacity: .5; cursor: not-allowed; }
+
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-size: 13px; cursor: pointer;
+}
+.switch-row input {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; cursor: pointer;
+  width: 34px; height: 20px; border-radius: 999px; background: var(--border);
+  position: relative; transition: background .15s;
+}
+.switch-row input::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; transition: transform .15s;
+}
+.switch-row input:checked { background: var(--accent); }
+.switch-row input:checked::after { transform: translateX(14px); }
+.last { font-size: 12px; color: var(--muted); word-break: break-word; }
+.last.ok { color: var(--ok-text); }
+.last.err { color: var(--err-text); }
+
 footer { padding: 0 14px 12px; color: var(--muted); font-size: 12px; text-align: center; }
 
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation-duration: 2s; }
   .primary { transition: none; }
+  .switch-row input, .switch-row input::after { transition: none; }
 }

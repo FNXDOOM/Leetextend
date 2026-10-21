@@ -1,9 +1,10 @@
 # LeetCode → GitHub Sync
 
-A Chrome (Manifest V3) extension that copies your **latest accepted LeetCode solution** for the
-problem you are viewing into your GitHub repository — one click, one commit. Nothing runs
-automatically: no content scripts, no background polling. The extension only wakes up when you
-open the popup or click **Sync to GitHub**.
+A Chrome (Manifest V3) extension that copies your **accepted LeetCode solutions** into your GitHub
+repository — one commit per solution. It syncs **automatically** the moment LeetCode shows
+"Accepted", and the popup keeps a **Sync to GitHub** button for syncing the current problem on
+demand. There are no content scripts: the extension is idle, adding nothing to your tabs, unless a
+submission is being judged or the popup is open.
 
 Each sync commits two files into `<NNNN-slug>/` of your repo:
 
@@ -47,6 +48,23 @@ https://github.com/settings/tokens/new with the `repo` scope as a fallback.
 
 Repeat syncs of the same accepted submission are skipped ("Already up to date", with an optional
 "Sync anyway" that commits regardless).
+
+## Autosync
+
+Autosync is **on by default**. Submit a solution on LeetCode and, when the verdict is Accepted, it is
+committed to your repo with no click. A green ✓ appears on the extension icon when it worked and a
+red ! if it failed; open the popup to see the details under the Sync button. Turn it off with the
+**Auto-sync accepted submissions** switch in the popup (the Sync button keeps working either way).
+
+- Only **Submit** counts. Run Code, wrong answers, time-limit errors and compile errors never sync.
+- It never duplicates the manual button: a submission that is already in your repo is skipped.
+- How it works: the extension watches (read-only) the `.../submissions/detail/<id>/check/` requests
+  that LeetCode's page makes while judging, using the `webRequest` permission. It does not read the
+  page or inject anything. If LeetCode changes that endpoint, update `CHECK_URL` / `CHECK_RE` in
+  `background.js`.
+- It only works while the browser is running with the extension enabled. Submissions made elsewhere
+  (another device, the LeetCode app) are not seen; open that problem and click **Sync to GitHub** to
+  catch up.
 
 ## Notes
 

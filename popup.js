@@ -72,6 +72,7 @@ async function init() {
   const info = await chrome.runtime.sendMessage({ type: "INFO", slug });
 
   show("setup", !info.configured);
+  $("syncAll").disabled = !info.configured;
   if (info.repo) $("repoInfo").textContent = `Syncing to ${info.repo}`;
 
   if (slug) {
@@ -86,5 +87,61 @@ async function init() {
   }
 }
 
+// ---- autosync toggle + result of the last automatic sync ----
+const ago = (t) => {
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+};
+
+async function initAuto() {
+  chrome.action.setBadgeText({ text: "" }); // popup is open, so clear the ✓ / ! badge
+  const v = await chrome.storage.local.get(["autoSync", "lastAuto"]);
+  $("auto").checked = v.autoSync !== false; // default ON
+  $("auto").onchange = () => chrome.storage.local.set({ autoSync: $("auto").checked });
+
+  const a = v.lastAuto;
+  if (a) {
+    const el = $("lastAuto");
+    el.textContent = a.ok
+      ? `Auto-synced ${a.title || a.path} · ${ago(a.at)}`
+      : `Auto-sync failed: ${a.error} · ${ago(a.at)}`;
+    el.className = `last ${a.ok ? "ok" : "err"}`;
+  }
+}
+
 $("sync").onclick = () => run(false);
+
+// ---- one-time catch-up: sync every problem you have already solved ----
+$("syncAll").onclick = async () => {
+  const btn = $("syncAll");
+  show("result", false);
+  btn.disabled = true;
+  $("sync").disabled = true;
+  btn.textContent = "Starting…";
+  const onChange = (c, area) => {
+    const b = area === "session" && c.bulk && c.bulk.newValue;
+    if (b) btn.textContent = b.total ? `${b.phase} ${b.done}/${b.total}` : b.phase;
+  };
+  chrome.storage.onChanged.addListener(onChange);
+  try {
+    const res = await chrome.runtime.sendMessage({ type: "SYNC_ALL" });
+    if (!res || !res.ok) return renderResult({ ok: false, text: (res && res.error) || "No response from the background worker." });
+    const extra = [
+      res.skipped ? `${res.skipped} skipped (no accepted submission in your last 20 attempts)` : "",
+      res.failed ? `${res.failed} failed to read` : "",
+    ].filter(Boolean).join(", ");
+    renderResult({
+      ok: true,
+      text: res.added ? `Synced ${res.added} problems${extra ? ", " + extra : ""}.` : `Nothing new to sync${extra ? " (" + extra + ")" : ""}.`,
+    });
+  } catch (e) {
+    renderResult({ ok: false, text: e.message });
+  } finally {
+    chrome.storage.onChanged.removeListener(onChange);
+    btn.textContent = "Sync all solved problems";
+    btn.disabled = false;
+    $("sync").disabled = !slug;
+  }
+};
 init();
+initAuto();
