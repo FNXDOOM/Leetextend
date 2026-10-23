@@ -1,3 +1,5 @@
+importScripts("config.js"); // WORKER_URL, saveTokens
+
 // ---------- constants ----------
 const LC_GRAPHQL = "https://leetcode.com/graphql";
 const GH_GRAPHQL = "https://api.github.com/graphql";
@@ -74,6 +76,31 @@ async function ghGql(token, query, variables) {
   return j.data;
 }
 
+// Repos the GitHub App was granted (only those the user selected at install time).
+async function listAppRepos(token) {
+  try {
+    const rest = async (path) => {
+      const r = await fetch(`https://api.github.com${path}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },
+      });
+      if (r.status === 401) throw new Error("GitHub rejected the token (401). Click Connect GitHub again.");
+      if (!r.ok) throw new Error(`GitHub request failed (${r.status}).`);
+      return r.json();
+    };
+    const { installations } = await rest("/user/installations?per_page=100");
+    const lists = await Promise.all(
+      installations.map((i) => rest(`/user/installations/${i.id}/repositories?per_page=100`))
+    );
+    const repos = lists
+      .flatMap((l) => l.repositories)
+      .filter((r) => !r.archived)
+      .map((r) => ({ name: r.full_name, isEmpty: false }));
+    return { ok: true, repos };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 // UTF-8 safe base64
 function b64(str) {
   let bin = "";
@@ -81,8 +108,38 @@ function b64(str) {
   return btoa(bin);
 }
 
-async function getConfig() {
-  const { token, owner, repo } = await chrome.storage.local.get(["token", "owner", "repo"]);
+// Expiring GitHub App tokens are refreshed through the worker. Refresh tokens rotate (the old one dies),
+// so concurrent callers must share one refresh.
+let refreshing = null;
+function refreshAccess(refreshToken) {
+  return (refreshing ??= (async () => {
+    try {
+      const r = await fetch(`${WORKER_URL}/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      const t = await r.json();
+      if (t.access_token) {
+        await saveTokens(t);
+        return t.access_token;
+      }
+      if (t.code === "bad_refresh_token") { // revoked or too old: the user has to sign in again
+        await chrome.storage.local.remove(["token", "refreshToken", "expiresAt"]);
+        throw new Error("GitHub session expired. Open settings and click Connect GitHub.");
+      }
+      throw new Error(`Could not refresh the GitHub token (${t.error || r.status}). Try again.`);
+    } finally {
+      refreshing = null;
+    }
+  })());
+}
+
+async function getConfig(refresh = true) {
+  let { token, refreshToken, expiresAt, owner, repo } = await chrome.storage.local.get(["token", "refreshToken", "expiresAt", "owner", "repo"]);
+  if (refresh && token && refreshToken && expiresAt && Date.now() > expiresAt - 60000) {
+    token = await refreshAccess(refreshToken);
+  }
   return { token, owner, repo, configured: !!(token && owner && repo) };
 }
 
@@ -116,8 +173,9 @@ const COMMIT = `mutation($input:CreateCommitOnBranchInput!){
 
 // The two files committed for one solved problem. Shared by sync() and syncAll().
 function solutionFiles(q, det) {
-  const folder = `${String(q.questionFrontendId).padStart(4, "0")}-${q.titleSlug}`;
-  const ext = EXT[det.lang.name] || "txt";
+  const safe = (s) => String(s).replace(/[^\w-]/g, ""); // ids/slugs come from LeetCode: never let them add path parts
+  const folder = `${safe(q.questionFrontendId).padStart(4, "0")}-${safe(q.titleSlug)}`;
+  const ext = Object.hasOwn(EXT, det.lang.name) ? EXT[det.lang.name] : "txt";
   const path = `${folder}/solution.${ext}`;
   const readme =
     `# ${q.questionFrontendId}. ${q.title}\n\n` +
@@ -334,7 +392,8 @@ async function watch(id) {
   watching.add(id);
   try {
     const { autoSync = true } = await chrome.storage.local.get("autoSync"); // default ON
-    const cfg = await getConfig();
+    const cfg = await getConfig().catch((e) => ({ configured: false, error: e.message }));
+    if (cfg.error) { await report({ ok: false, error: cfg.error }); return; }
     if (!autoSync || !cfg.configured) { log("skipped: autoSync", autoSync, "configured", cfg.configured); return; }
 
     const doneKey = `auto:${id}`;
@@ -406,7 +465,7 @@ const handlers = {
 
   // popup open: is the extension configured, and what problem is this?
   async INFO({ slug }) {
-    const { owner, repo, configured } = await getConfig();
+    const { owner, repo, configured } = await getConfig(false); // popup open: no refresh needed
     let question = null;
     if (slug) {
       try { question = await getQuestion(slug); } catch { /* popup falls back to the slug */ }
@@ -416,6 +475,7 @@ const handlers = {
 
   // options page: "Load my repositories" (runs only on click, see R18)
   async LIST_REPOS({ token }) {
+    if (typeof token === "string" && token.startsWith("ghu_")) return listAppRepos(token); // GitHub App user token
     try {
       const d = await ghGql(
         token,
@@ -438,6 +498,15 @@ const handlers = {
     }
   },
 
+  // options page: the current token, refreshed first if it is about to expire
+  async TOKEN() {
+    try {
+      return { token: (await getConfig()).token || "" };
+    } catch (e) {
+      return { token: "", error: e.message };
+    }
+  },
+
   // options page: "Test connection"
   async TEST({ token, owner, repo }) {
     try {
@@ -449,8 +518,14 @@ const handlers = {
   },
 };
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  const h = handlers[msg && msg.type];
+// first install: open settings so the user can click Connect GitHub right away
+chrome.runtime.onInstalled.addListener((d) => {
+  if (d.reason === "install") chrome.runtime.openOptionsPage();
+});
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return false; // extension pages only
+  const h = msg && Object.hasOwn(handlers, msg.type) ? handlers[msg.type] : null;
   if (!h) return false;
   h(msg).then(sendResponse);
   return true; // keep the channel open for the async response

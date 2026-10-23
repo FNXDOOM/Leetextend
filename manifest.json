@@ -3,7 +3,7 @@
   "name": "LeetCode → GitHub Sync",
   "version": "0.2.0",
   "description": "Sync your accepted LeetCode solutions to GitHub automatically, or with one click.",
-  "permissions": ["storage", "activeTab", "webRequest"],
+  "permissions": ["storage", "activeTab", "webRequest", "identity"],
   "host_permissions": [
     "https://leetcode.com/*",
     "https://api.github.com/*"
