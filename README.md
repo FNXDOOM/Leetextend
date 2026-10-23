@@ -17,7 +17,38 @@ your-repo/
     ...
 ```
 
-## 1. Create a GitHub token
+## 1a. Connect with GitHub (recommended, no token)
+
+Authorize a GitHub App and choose which repos it can touch. Users never copy a token.
+
+One-time setup by whoever publishes the extension:
+
+1. https://github.com/settings/apps/new → name it, set any Homepage URL, untick **Webhook → Active**.
+2. **Permissions → Repository → Contents:** Read and write.
+3. **Callback URL:** `https://<extension-id>.chromiumapp.org/` (open the settings page and check its console for the exact URL; add one per extension ID, e.g. your local one and the Chrome Web Store one). Tick **Request user authorization (OAuth) during installation**. Leave **Expire user authorization tokens** ticked (the extension refreshes tokens through the worker). Leave Device Flow off.
+4. **Where can this app be installed?** → *Any account* if others will use it.
+5. Create it, copy the **Client ID**, and generate a **Client secret**.
+6. Deploy the token worker. It only holds the client secret (the extension can't):
+
+   ```
+   cd auth-worker
+   npx wrangler secret put GITHUB_CLIENT_ID
+   npx wrangler secret put GITHUB_CLIENT_SECRET
+   npx wrangler deploy
+   ```
+
+7. Put the Client ID, the slug from `github.com/apps/<slug>` and the worker URL (no trailing slash) into `CLIENT_ID`, `APP_SLUG` and `WORKER_URL` in `config.js`. Reload the extension.
+
+Exclude `auth-worker/` from the zip you upload to the Chrome Web Store. The extension ID must be
+stable: use the ID the store gives you, and for local testing keep the same folder path (or add a
+`key` to `manifest.json`).
+
+For each user (settings open automatically on install): click **Connect GitHub**, click
+**Authorize** in the GitHub popup, then tick the repositories to allow in the next popup. The
+extension selects the repo (or lets you pick one) and tests the connection itself. **Disconnect** signs out and revokes the app's access on GitHub. To change access later, click **Choose repositories on GitHub**, or
+use GitHub → Settings → Applications → Installed GitHub Apps → Configure.
+
+## 1b. Or create a GitHub token
 
 Use a **fine-grained personal access token** limited to the one repo you sync to:
 
