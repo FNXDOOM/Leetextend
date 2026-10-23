@@ -7,27 +7,32 @@
 <body>
   <header>
     <div class="brand">
-      <span class="logo">&lt;/&gt;</span>
+      <span class="logo" aria-hidden="true"></span>
       <h1>LeetCode → GitHub</h1>
     </div>
-    <button id="settings" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
+    <button id="settings" class="icon-btn" title="Settings" aria-label="Settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
   </header>
 
   <main>
-    <section id="problem" class="card hidden">
-      <div class="meta">
-        <span id="num" class="num"></span>
-        <span id="diff" class="badge"></span>
+    <section id="problem" class="card problem hidden">
+      <span class="node" aria-hidden="true"></span>
+      <div class="body">
+        <div class="meta">
+          <span id="num" class="num"></span>
+          <span id="diff" class="badge"></span>
+        </div>
+        <div id="title" class="title"></div>
       </div>
-      <div id="title" class="title"></div>
     </section>
 
     <section id="empty" class="card empty hidden">
-      Open a LeetCode problem page to sync it.
+      Open a LeetCode problem to sync it.
     </section>
 
     <section id="setup" class="notice hidden">
-      <span>Add your GitHub token and repo first.</span>
+      <span>Connect GitHub to start syncing.</span>
       <button id="openSettings" class="link-btn">Open settings</button>
     </section>
 
